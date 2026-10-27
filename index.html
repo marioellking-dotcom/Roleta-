@@ -1,0 +1,162 @@
+<!DOCTYPE html><html lang="pt"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Roleta dos amigos</title>
+<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#0c2e24"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.78.0"></script>
+<style>
+:root{--bg:#0c2e24;--cd:#12392d;--tx:#f3ecd9;--mu:#a9b3a2;--bd:#2b5446;--go:#d9a441;--ok:#7be0a0;--no:#ff8a7a}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,sans-serif;padding:12px}
+main{max-width:480px;margin:auto;display:grid;gap:10px}
+h1{font:700 24px Georgia,serif;margin:0}h2{font:700 16px Georgia,serif;margin:0 0 6px}
+.c{background:var(--cd);border:1px solid var(--bd);border-radius:10px;padding:12px}
+.r{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.r>*{flex:1 1 100px;min-width:0}
+input,select,button{font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:9px}
+button{background:var(--go);color:#10281f;font-weight:700;border:0;cursor:pointer}button.g{background:none;color:var(--tx);border:1px solid var(--bd)}button:disabled{opacity:.5}
+:focus-visible{outline:2px solid var(--go);outline-offset:2px}
+.big{font:700 26px Georgia,serif}.mu{color:var(--mu);font-size:13px}canvas{width:100%;max-width:340px;display:block;margin:auto}
+#res{min-height:26px;text-align:center;font-weight:700}.win{color:var(--ok)}.lose{color:var(--no)}
+ul{list-style:none;margin:0;padding:0;max-height:260px;overflow:auto}li{padding:5px 0;border-bottom:1px solid var(--bd);font-size:14px}
+code{word-break:break-all;font-size:12px}[hidden]{display:none!important}
+</style></head><body><main>
+<h1>Roleta dos amigos</h1>
+<section id="auth" class="c">
+<div class="r"><button class="g" id="tl">Entrar</button><button class="g" id="tr">Criar conta</button></div>
+<div class="r" style="margin-top:8px"><input id="u" type="tel" inputmode="tel" placeholder="Telemóvel Vodacom, ex.: 84 123 4567" autocomplete="username"><input id="p" type="password" placeholder="Palavra-passe" autocomplete="current-password"></div>
+<div class="r" style="margin-top:8px" id="cw" hidden><input id="nm" maxlength="16" placeholder="Nome de jogador (visível a todos)" autocomplete="nickname"><input id="code" placeholder="Código de convite"></div>
+<div class="r" style="margin-top:8px"><button id="go">Entrar</button></div><p class="mu">Entras com o teu número Vodacom de Moçambique (84 ou 85). O número só é visível ao administrador.</p><p class="mu" id="ae"></p>
+</section>
+<div id="app" hidden style="display:grid;gap:10px">
+<section class="c r"><div><div class="mu" id="who"></div><div class="big" id="bal"></div></div><div class="mu">Banca <b id="bk"></b><br>Aposta máx. <b id="mx"></b></div><button class="g" id="mt">Som: ligado</button><button class="g" id="mu">Música: ligada</button><button class="g" id="lo">Sair</button></section>
+<nav class="r"><button class="g" data-t="g">Jogo</button><button class="g" data-t="h">Histórico</button><button class="g" data-t="a" id="nba" hidden>Admin</button></nav>
+<section id="tg" class="c" style="display:grid;gap:8px">
+<canvas id="wheel" aria-label="Roda de multiplicadores"></canvas>
+<div class="r"><input id="bet" type="number" min="1" step="1" placeholder="Aposta (MT)" aria-label="Aposta"><button id="spin">Girar</button></div>
+<div class="r" id="chips"></div>
+<div class="r"><input id="wa" type="number" min="1" step="1" placeholder="Valor (MT)" aria-label="Valor"><button id="rd">Depositar</button><button class="g" id="rw">Levantar</button></div><ul id="rq"></ul>
+<div id="res" role="status" aria-live="polite"></div>
+<div><h2>Ao vivo</h2><ul id="feed"></ul></div>
+<details class="mu"><summary>Probabilidades (as fatias da roda não têm o mesmo peso)</summary><p id="odds"></p></details>
+<p class="mu">Compromisso do próximo giro (o resultado já está decidido e não pode mudar):<br><code id="cm"></code></p>
+</section>
+<section id="th" class="c" hidden><h2>Histórico</h2><p class="mu">Cada giro revela a semente depois de jogado. Toca em Verificar para confirmar que o resultado era o prometido.</p><ul id="hl"></ul></section>
+<section id="ta" class="c" hidden style="display:none"><h2>Administração</h2>
+<h2 style="font-size:14px">Pedidos pendentes</h2><ul id="ar"></ul>
+<h2 style="font-size:14px">Jogadores</h2><ul id="al"></ul>
+<div class="r" style="margin-top:8px"><select id="au" aria-label="Jogador"></select><input id="aa" type="number" min="0" placeholder="Valor (MT)"></div>
+<div class="r" style="margin-top:8px"><button id="dp">Depósito</button><button class="g" id="wd">Levantamento</button></div>
+<div class="r" style="margin-top:8px"><input id="ba" type="number" min="0" placeholder="Valor da banca"><button class="g" id="b1">Banca +</button><button class="g" id="b2">Banca −</button></div>
+<div class="r" style="margin-top:8px"><button class="g" id="iv">Gerar convite</button></div><p class="mu" id="inv"></p><p class="mu" id="as"></p></section>
+</div></main>
+<script>
+const SB_URL='https://wcuczrfzmxfseneaeseb.supabase.co',SB_KEY='sb_publishable_vJ3QlbERKFn767hrI9BFKQ_qs7FQ6bd';
+const sb=supabase.createClient(SB_URL,SB_KEY);
+const TABLE=[[0,430],[.5,250],[1,140],[1.5,80],[2,45],[3,25],[5,15],[10,8],[20,4],[50,2],[100,1]],SEG=[0,5,.5,20,1,100,1.5,10,2,50,3];
+const $=i=>document.getElementById(i),r2=x=>Math.round(x*100)/100,fmt=n=>n.toLocaleString('pt-PT',{maximumFractionDigits:2})+' MT',mf=m=>String(m).replace('.',',')+'x';
+let me=null,busy=false,rot=0,mute=false,AC,mode='l',es,pend=null,st=0,mus=true,mT=0,mN=0,mS=0,mB,mE,NB,mP=76;
+function beep(f,d,t,v,at=0){if(mute||!AC)return;const o=AC.createOscillator(),g=AC.createGain(),s=AC.currentTime+at;o.type=t;o.frequency.value=f;g.gain.setValueAtTime(v,s);g.gain.exponentialRampToValueAtTime(.001,s+d);o.connect(g);g.connect(AC.destination);o.start(s);o.stop(s+d)}
+const sfx={tick:()=>beep(900,.04,'square',.04),lose:()=>{beep(220,.25,'sawtooth',.1);beep(165,.35,'sawtooth',.1,.2)},win:()=>[523,659,784].forEach((f,i)=>beep(f,.2,'triangle',.15,i*.12)),big:()=>[523,659,784,1047,1319].forEach((f,i)=>beep(f,.25,'triangle',.18,i*.1))};
+const em=u=>u+'@roleta-amigos.com',fail=e=>({e:e.message||'Erro'}),norm=v=>{const d=String(v||'').replace(/[\s().-]/g,'').replace(/^(\+|00)/,'');return d.length===12&&d.startsWith('258')?d.slice(3):d},PH=/^8[45][0-9]{7}$/;
+async function api(p,b){try{
+if(p==='/api/login'||p==='/api/register'){const u=norm(b.user),pw=String(b.pass||'');
+const r=p==='/api/login'?await sb.auth.signInWithPassword({email:em(u),password:pw}):await sb.auth.signUp({email:em(u),password:pw,options:{data:{username:String(b.nick||'').trim().toLowerCase(),phone:u,code:b.code}}});
+if(r.error)return{e:p==='/api/login'?'Dados incorretos.':'Não foi possível criar a conta: convite inválido ou já usado, número ou nome já registados, ou grupo cheio (máx. 100 pessoas).'};
+return r.data.session?{ok:1}:{e:'No Supabase, desliga "Confirm email" (Authentication > Providers > Email).'}}
+const{data:{session}}=await sb.auth.getSession();if(!session){showAuth();return{e:'Sessão expirada.'}}
+if(p==='/api/me'){const[a,t]=await Promise.all([sb.from('profiles').select('*').eq('id',session.user.id).single(),sb.rpc('state')]);if(a.error)return fail(a.error);return{id:a.data.id,user:a.data.username,admin:a.data.is_admin,bal:+a.data.bal,...t.data}}
+if(p==='/api/spin'){const r=await sb.rpc('spin',{p_bet:b.bet,p_cs:b.cs});return r.error?fail(r.error):r.data}
+if(p==='/api/history'){const[x,y]=await Promise.all([sb.from('spins').select('*').order('id',{ascending:false}).limit(50),sb.from('movements').select('*').order('id',{ascending:false}).limit(30)]);
+return[...(x.data||[]).map(l=>({t:'spin',user:l.username,a:+l.bet,m:+l.mult,pay:+l.pay,seed:l.seed,commit:l.commit_hash,cs:l.cs,n:+l.n,ts:Date.parse(l.ts)})),...(y.data||[]).map(l=>({t:l.kind,user:l.username,a:+l.amount,ts:Date.parse(l.ts)}))].sort((a,b)=>b.ts-a.ts).slice(0,50)}
+if(p==='/api/admin/users'){const[x,y]=await Promise.all([sb.from('profiles').select('username,phone,bal,is_admin').order('username'),sb.from('invites').select('code').eq('used',false).eq('is_admin',false)]);if(x.error)return fail(x.error);return{users:x.data.map(v=>({user:v.username,phone:v.phone||'',admin:v.is_admin,bal:+v.bal})),invites:(y.data||[]).map(v=>v.code)}}
+if(p==='/api/admin/invite'){const r=await sb.rpc('admin_invite');return r.error?fail(r.error):{code:r.data}}
+if(p==='/api/admin/credit'){const r=await sb.rpc('admin_credit',{p_user:b.user,p_amount:b.amount});return r.error?fail(r.error):{ok:1}}
+if(p==='/api/admin/bank'){const r=await sb.rpc('admin_bank',{p_amount:b.amount});return r.error?fail(r.error):{ok:1}}
+if(p==='/api/rpc'){const r=await sb.rpc(b.fn,b.args);return r.error?fail(r.error):{ok:1}}if(p==='/api/reqs'){const r=await sb.from('requests').select('*').order('id',{ascending:false}).limit(30);return r.error?fail(r.error):{rows:r.data}}return{e:'?'}}catch(e){return{e:'Sem ligação ao servidor.'}}}
+const msg=(t,k)=>{$('res').textContent=t;$('res').className=k||''};
+const setBal=()=>$('bal').textContent=fmt(me.bal);
+function setState(s){$('bk').textContent=fmt(s.bank);$('mx').textContent=fmt(s.maxBet);$('cm').textContent=s.commit}
+const W=360,cv=$('wheel'),cx=cv.getContext('2d');cv.width=cv.height=W;
+const col=m=>m===0?'#4b5563':m<1?'#b45309':m<=2?'#0f766e':m<=10?'#2563eb':m<50?'#7e22ce':'#dc2626';
+function draw(r){cx.clearRect(0,0,W,W);const R=W/2-6,a=2*Math.PI/SEG.length,c=W/2;
+SEG.forEach((m,i)=>{cx.beginPath();cx.moveTo(c,c);cx.arc(c,c,R,r+i*a,r+(i+1)*a);cx.closePath();cx.fillStyle=col(m);cx.fill();cx.strokeStyle='rgba(0,0,0,.45)';cx.lineWidth=2;cx.stroke();
+cx.save();cx.translate(c,c);cx.rotate(r+(i+.5)*a);cx.fillStyle='#fff';cx.font='bold 22px system-ui';cx.textAlign='right';cx.fillText(mf(m),R-14,8);cx.restore()});
+cx.beginPath();cx.arc(c,c,26,0,7);cx.fillStyle='#1a1a1a';cx.fill();
+cx.beginPath();cx.moveTo(c-14,2);cx.lineTo(c+14,2);cx.lineTo(c,34);cx.closePath();cx.fillStyle='#facc15';cx.fill();cx.strokeStyle='#000';cx.lineWidth=1.5;cx.stroke()}
+function animate(idx){return new Promise(ok=>{busy=true;const a=2*Math.PI/SEG.length,T=2*Math.PI,want=((-Math.PI/2-(idx+.5)*a+(Math.random()-.5)*.7*a)%T+T)%T,have=((rot%T)+T)%T,r0=rot,r1=rot+5*T+((want-have+T)%T),t0=performance.now(),D=4200;let last=Math.floor(r0/a);
+(function f(t){const k=Math.min(1,(t-t0)/D),e=1-Math.pow(1-k,3);rot=r0+(r1-r0)*e;draw(rot);const q=Math.floor(rot/a);if(q!==last){last=q;sfx.tick()}if(k<1)requestAnimationFrame(f);else{busy=false;ok()}})(t0)})}
+function addFeed(d){const li=document.createElement('li');li.textContent=d.user+': '+fmt(d.a)+' → '+mf(d.m)+' ('+fmt(d.pay)+')';const L=$('feed');L.prepend(li);while(L.children.length>30)L.lastChild.remove()}
+async function spin(){if(busy)return;const bet=parseFloat($('bet').value);if(!(bet>0))return msg('Indica a aposta.','lose');
+AC=AC||new AudioContext();AC.resume();$('spin').disabled=true;busy=true;pend=null;
+const cs=[...crypto.getRandomValues(new Uint8Array(8))].map(x=>x.toString(16).padStart(2,'0')).join('');
+const r=await api('/api/spin',{bet,cs});if(r.e){busy=false;$('spin').disabled=false;if(/removida/.test(r.e)){await sb.auth.signOut();location.reload();return}return msg(r.e,'lose')}
+msg('A girar…');await animate(SEG.indexOf(r.m));
+$('spin').disabled=false;me.bal=pend??r.bal;setBal();setState({...r,commit:'a atualizar…'});sb.rpc('state').then(t=>{if(t.data)setState(t.data)});
+const net=r2(r.pay-bet);msg((net>=0?'+ ':'− ')+fmt(Math.abs(net))+' ('+mf(r.m)+')',net>0?'win':net<0?'lose':'');
+(r.m>=20?sfx.big:net>0?sfx.win:net<0?sfx.lose:sfx.tick)();addFeed({user:me.user,a:bet,m:r.m,pay:r.pay})}
+const lineOf=l=>l.t==='spin'?l.user+': '+fmt(l.a)+' → '+mf(l.m)+' ('+fmt(l.pay)+')':l.t==='dep'?'Depósito de '+l.user+': +'+fmt(l.a):l.t==='wd'?'Levantamento de '+l.user+': −'+fmt(l.a):l.t==='rm'?'Removido: '+l.user:'Banca '+(l.a>0?'+':'−')+fmt(Math.abs(l.a));
+async function verify(l){const k=new TextEncoder(),h=async s=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',k.encode(s)))].map(x=>x.toString(16).padStart(2,'0')).join('');
+const key=await crypto.subtle.importKey('raw',k.encode(l.seed),{name:'HMAC',hash:'SHA-256'},false,['sign']),sig=new Uint8Array(await crypto.subtle.sign('HMAC',key,k.encode(l.cs+':'+l.n)));
+let v=0;for(let i=0;i<6;i++)v=v*256+sig[i];v%=1000;let a=0,m;for(const[x,w]of TABLE){a+=w;if(v<a){m=x;break}}return{ok:await h(l.seed)===l.commit&&m===l.m}}
+async function hist(){const h=await api('/api/history'),L=$('hl');L.textContent='';if(h.e)return;h.forEach(l=>{const li=document.createElement('li');li.textContent=lineOf(l);
+if(l.t==='spin'){const b=document.createElement('button');b.className='g';b.textContent='Verificar';b.style.cssText='margin-left:8px;padding:2px 8px;font-size:12px';b.onclick=async()=>{b.textContent=(await verify(l)).ok?'✔ confere':'✘ NÃO confere'};li.appendChild(b)}L.appendChild(li)})}
+async function adm(){const d=await api('/api/admin/users');if(d.e)return;const s=$('au'),L=$('al');s.textContent='';L.textContent='';
+d.users.forEach(x=>{const o=document.createElement('option');o.value=x.user;o.textContent=x.user+(x.phone?' · '+x.phone:'');s.appendChild(o);const li=document.createElement('li');li.textContent=x.user+(x.phone?' ('+x.phone+')':'')+': '+fmt(x.bal);if(!x.admin)li.appendChild(btn('Remover',e=>{const b=e.target;if(b.textContent==='Remover'){b.textContent='Confirmar?';setTimeout(()=>b.textContent='Remover',4000);return}adm2('/api/rpc',{fn:'admin_remove',args:{p_user:x.user}})}));L.appendChild(li)});
+$('inv').textContent=d.invites.length?'Convites por usar: '+d.invites.join(', '):'';rqload()}
+async function adm2(p,b){const r=await api(p,b);$('as').textContent=r.e||'Feito.';if(!r.e){$('aa').value=$('ba').value='';adm()}return r}
+$('dp').onclick=()=>{const v=parseFloat($('aa').value);if(v>0)adm2('/api/admin/credit',{user:$('au').value,amount:v})};
+$('wd').onclick=()=>{const v=parseFloat($('aa').value);if(v>0)adm2('/api/admin/credit',{user:$('au').value,amount:-v})};
+$('b1').onclick=()=>{const v=parseFloat($('ba').value);if(v>0)adm2('/api/admin/bank',{amount:v})};
+$('b2').onclick=()=>{const v=parseFloat($('ba').value);if(v>0)adm2('/api/admin/bank',{amount:-v})};
+$('iv').onclick=async()=>{const r=await adm2('/api/admin/invite',{});if(r.code)$('as').textContent='Convite: '+r.code+' (envia-o a um amigo)'};
+document.querySelectorAll('nav [data-t]').forEach(b=>b.onclick=()=>{const t=b.dataset.t;['g','h','a'].forEach(x=>{const e=$('t'+x);e.hidden=x!==t;e.style.display=x===t?'grid':'none'});if(t==='h')hist();if(t==='a')adm()});
+[1,2,5,10].forEach(v=>{const b=document.createElement('button');b.className='g';b.textContent=v;b.onclick=()=>$('bet').value=v;$('chips').appendChild(b)});
+$('lo').onclick=async()=>{await sb.auth.signOut();location.reload()};$('spin').onclick=spin;try{mus=localStorage.getItem('rl_mus')!=='0';mute=localStorage.getItem('rl_mute')==='1'}catch(e){}const sv=()=>{try{localStorage.setItem('rl_mute',mute?1:0);localStorage.setItem('rl_mus',mus?1:0)}catch(e){}};$('mt').textContent='Som: '+(mute?'desligado':'ligado');$('mu').textContent='Música: '+(mus?'ligada':'desligada');$('mt').onclick=()=>{mute=!mute;$('mt').textContent='Som: '+(mute?'desligado':'ligado');sv();syncMusic()};$('mu').onclick=()=>{mus=!mus;$('mu').textContent='Música: '+(mus?'ligada':'desligada');sv();syncMusic()};
+function live(){if(es)sb.removeChannel(es);es=sb.channel('live')
+.on('postgres_changes',{event:'INSERT',schema:'public',table:'spins'},e=>{const d=e.new;if(d.username!==me.user)addFeed({user:d.username,a:+d.bet,m:+d.mult,pay:+d.pay})})
+.on('postgres_changes',{event:'UPDATE',schema:'public',table:'bank'},()=>{if(busy||st)return;st=setTimeout(async()=>{st=0;if(busy)return;const t=await sb.rpc('state');if(t.data)setState(t.data)},Math.random()*2000)})
+.on('postgres_changes',{event:'UPDATE',schema:'public',table:'profiles',filter:'id=eq.'+me.id},e=>{const bal=+e.new.bal;if(busy){pend=bal;return}if(bal!==me.bal){const up=bal>me.bal;me.bal=bal;setBal();if(up)sfx.win()}})
+.on('postgres_changes',{event:'*',schema:'public',table:'requests'},()=>{rqload();if(!busy)rb()})
+.subscribe()}
+function showAuth(){$('auth').hidden=false;$('app').hidden=true;if(es){sb.removeChannel(es);es=null}}
+async function start(){const m=await api('/api/me');if(m.e)return showAuth();me=m;$('auth').hidden=true;$('app').hidden=false;$('who').textContent=m.user;setBal();setState(m);$('nba').hidden=!m.admin;
+const h=await api('/api/history');if(!h.e)h.filter(l=>l.t==='spin').slice(0,15).reverse().forEach(addFeed);live();rqload()}
+$('tl').onclick=()=>{mode='l';$('cw').hidden=true;$('go').textContent='Entrar'};
+$('tr').onclick=()=>{mode='r';$('cw').hidden=false;$('go').textContent='Criar conta'};
+$('go').onclick=async()=>{const ph=norm($('u').value),nk=$('nm').value.trim().toLowerCase(),pw=$('p').value,cd=$('code').value.trim();
+const x=!PH.test(ph)?'Número inválido: usa um número Vodacom de Moçambique (84 ou 85 e mais 7 dígitos), por exemplo 84 123 4567.':mode==='r'?(!/^[a-z][a-z0-9]{2,15}$/.test(nk)?'Nome de jogador: 3 a 16 caracteres, só letras minúsculas (sem acentos) e números, a começar por letra.':pw.length<6?'A palavra-passe precisa de pelo menos 6 caracteres.':!cd?'Falta o código de convite.':''):'';
+if(x)return $('ae').textContent=x;
+const r=await api(mode==='r'?'/api/register':'/api/login',{user:ph,nick:nk,pass:pw,code:cd});if(r.e)return $('ae').textContent=r.e;$('ae').textContent='';await start();wake()};
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');
+const mid=m=>440*Math.pow(2,(m-69)/12),K=(r,q)=>[r,[[0,3,7],[0,4,7],[0,4,7,10],[0,3,7,10],[0,4,7,11]][q]],
+PR=[K(45,3),K(41,4),K(48,1),K(43,1),K(50,3),K(43,2),K(48,4),K(45,3),K(41,1),K(43,1),K(40,3),K(45,0),K(41,4),K(43,1),K(40,2),K(40,2)],
+HK=[[[0,76,3],[3,79,3],[6,76,2],[8,74,3],[11,72,2],[14,74,2]],[[0,72,3],[3,74,3],[6,72,2],[8,69,4]],[[0,76,3],[3,79,3],[6,81,2],[8,79,3],[11,76,2],[14,74,2]],[[0,74,3],[3,76,3],[6,74,2],[8,71,6]]],
+BP={0:0,3:0,6:7,8:0,11:12,14:7},TR=[0,3,6,8,11,14],AP=[0,1,2,1,2,1];
+function nt(f,t,d,ty,v,a,e){const o=AC.createOscillator(),g=AC.createGain();o.type=ty;o.frequency.value=f;g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(v,t+a);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g);g.connect(mB);if(e)g.connect(mE);o.start(t);o.stop(t+d+.05)}
+function nz(t,d,v,f,ty){const o=AC.createBufferSource(),g=AC.createGain(),h=AC.createBiquadFilter();o.buffer=NB;h.type=ty;h.frequency.value=f;g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(h);h.connect(g);g.connect(mB);o.start(t);o.stop(t+d+.02)}
+function kk(t,v){const o=AC.createOscillator(),g=AC.createGain();o.frequency.setValueAtTime(140,t);o.frequency.exponentialRampToValueAtTime(45,t+.12);g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.0001,t+.3);o.connect(g);g.connect(mB);o.start(t);o.stop(t+.32)}
+function mel(vr,iv){const c=[];iv.forEach(i=>c.push(vr+12+i,vr+24+i));const k=c.filter(m=>m>=69&&m<=88).sort((a,b)=>Math.abs(a-mP)-Math.abs(b-mP));return mP=k[Math.floor(Math.random()*Math.min(3,k.length))]}
+function mTick(){while(mN<AC.currentTime+.3){const q=.15,bi=Math.floor(mS/16),s=mS%16,b=bi%16,cy=Math.floor(bi/16),[r,iv]=PR[b],vr=r%12+(r%12<5?60:48),t=mN+Math.random()*.01,tr=TR.indexOf(s);
+if(s===0)iv.forEach(i=>nt(mid(vr+i),t,q*15,'sine',.04,.5));
+if(tr>=0)nt(mid(vr+(b>=4&&b<8?24:12)+iv[AP[tr]%iv.length]),t,q*2.5,'triangle',.06,.005,1);
+if(bi>=2){if(BP[s]!==undefined)nt(mid(r+BP[s]),t,q*3,'triangle',.2,.01);if(s===0||s===6||s===10)kk(t,.28)}
+if(bi>=4&&(s===4||s===12)){nz(t,.12,.07,1800,'bandpass');nt(190,t,.1,'triangle',.05,.002)}
+if(b===15&&(s===11||s>=13))nz(t,.08,.05,2200,'bandpass');
+if(s%2===0){if(Math.random()>.12)nz(t,.04,s%4===0?.04:.025,7000,'highpass')}else if(Math.random()>.5)nz(t,.03,.012,9000,'highpass');
+if(b<4){const h=HK[b].find(x=>x[0]===s);if(h){nt(mid(h[1]),t,q*h[2],'triangle',.075,.01,1);nt(mid(h[1]+12),t,q*h[2]*.5,'sine',.02,.01,1);mP=h[1]}}
+else if((b>=8||cy%3===2)&&tr>=0&&Math.random()<.62){const m=mel(vr,iv);nt(mid(m),t,q*3,'triangle',.07,.01,1);nt(mid(m+12),t,q*1.5,'sine',.02,.01,1)}
+mN+=q;mS++}}
+function mInit(){mB=AC.createGain();mB.gain.value=.0001;mB.connect(AC.destination);mE=AC.createGain();const d=AC.createDelay(),fb=AC.createGain(),w=AC.createGain();d.delayTime.value=.45;fb.gain.value=.32;w.gain.value=.3;mE.connect(d);d.connect(fb);fb.connect(d);d.connect(w);w.connect(mB);NB=AC.createBuffer(1,AC.sampleRate,AC.sampleRate);const a=NB.getChannelData(0);for(let i=0;i<a.length;i++)a[i]=Math.random()*2-1}
+function syncMusic(){if(!AC)return;const on=!mute&&mus&&!$('app').hidden;if(on&&!mB)mInit();if(mB)mB.gain.setTargetAtTime(on?.32:0,AC.currentTime,on?.4:.05);if(on&&!mT){mN=AC.currentTime+.1;mT=setInterval(mTick,120)}else if(!on&&mT){clearInterval(mT);mT=0}}
+function wake(){AC=AC||new AudioContext();if(AC.state!=='running')AC.resume();syncMusic()}
+['pointerdown','touchend','click'].forEach(e=>addEventListener(e,wake,{passive:true}));
+document.addEventListener('visibilitychange',()=>{if(AC){if(document.hidden)AC.suspend();else AC.resume()}});
+const btn=(t,f)=>{const b=document.createElement('button');b.className='g';b.textContent=t;b.style.cssText='margin-left:8px;padding:2px 8px;font-size:12px';b.onclick=f;return b},
+rb=async()=>{const m=await api('/api/me');if(!m.e){me.bal=m.bal;setBal();setState(m)}},
+rres=async(id,act)=>{const r=await api('/api/rpc',{fn:'resolve_request',args:{p_id:id,p_act:act}});if(r.e){msg(r.e,'lose');$('as').textContent=r.e}rqload();rb()},
+ST={pend:'pendente',ok:'aprovado',no:'recusado',cancel:'cancelado'};
+async function rqload(){const d=await api('/api/reqs'),L=$('rq'),A=$('ar');if(d.e)return;L.textContent='';A.textContent='';
+d.rows.forEach(x=>{const t=(x.kind==='dep'?'Depósito ':'Levantamento ')+fmt(+x.amount);
+if(x.user_id===me.id&&L.children.length<5){const li=document.createElement('li');li.textContent=t+' — '+ST[x.status];if(x.status==='pend')li.appendChild(btn('Cancelar',()=>rres(x.id,'cancel')));L.appendChild(li)}
+if(me.admin&&x.status==='pend'){const li=document.createElement('li');li.textContent=x.username+': '+t;li.appendChild(btn('Aprovar',()=>rres(x.id,'ok')));li.appendChild(btn('Recusar',()=>rres(x.id,'no')));A.appendChild(li)}})}
+async function ask(k){const v=parseFloat($('wa').value);if(!(v>0))return msg('Indica o valor.','lose');const r=await api('/api/rpc',{fn:'request_money',args:{p_kind:k,p_amount:v}});if(r.e)return msg(r.e,'lose');$('wa').value='';msg(k==='dep'?'Pedido enviado. Envia o dinheiro ao administrador e espera a confirmação.':'Pedido enviado. O administrador paga-te e confirma.');rb();rqload()}
+$('rd').onclick=()=>ask('dep');$('rw').onclick=()=>ask('wd');
+$('odds').textContent=TABLE.map(([m,w])=>mf(m)+' = '+String(w/10).replace('.',',')+'%').join(' · ')+'. Retorno médio: '+String(TABLE.reduce((a,[m,w])=>a+m*w,0)/10).replace('.',',')+'% (a banca fica com a diferença).';
+draw(0);start();
+</script></body></html>
