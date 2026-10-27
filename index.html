@@ -15,7 +15,7 @@ button{background:var(--go);color:#10281f;font-weight:700;border:0;cursor:pointe
 #res{min-height:26px;text-align:center;font-weight:700}.win{color:var(--ok)}.lose{color:var(--no)}
 ul{list-style:none;margin:0;padding:0;max-height:260px;overflow:auto}li{padding:5px 0;border-bottom:1px solid var(--bd);font-size:14px}
 code{word-break:break-all;font-size:12px}[hidden]{display:none!important}
-</style></head><body><main>
+.hh{background:var(--go);color:#10281f;border-radius:8px;padding:8px 10px;font-weight:700}</style></head><body><main>
 <h1>Roleta dos amigos</h1>
 <section id="auth" class="c">
 <div class="r"><button class="g" id="tl">Entrar</button><button class="g" id="tr">Criar conta</button></div>
@@ -27,10 +27,11 @@ code{word-break:break-all;font-size:12px}[hidden]{display:none!important}
 <section class="c r"><div><div class="mu" id="who"></div><div class="big" id="bal"></div></div><div class="mu">Banca <b id="bk"></b><br>Aposta máx. <b id="mx"></b></div><button class="g" id="mt">Som: ligado</button><button class="g" id="mu">Música: ligada</button><button class="g" id="lo">Sair</button></section>
 <nav class="r"><button class="g" data-t="g">Jogo</button><button class="g" data-t="h">Histórico</button><button class="g" data-t="a" id="nba" hidden>Admin</button></nav>
 <section id="tg" class="c" style="display:grid;gap:8px">
-<canvas id="wheel" aria-label="Roda de multiplicadores"></canvas>
+<div id="hh" class="hh" hidden></div><canvas id="wheel" aria-label="Roda de multiplicadores"></canvas>
 <div class="r"><input id="bet" type="number" min="1" step="1" placeholder="Aposta (MT)" aria-label="Aposta"><button id="spin">Girar</button></div>
-<div class="r" id="chips"></div>
-<div class="r"><input id="wa" type="number" min="1" step="1" placeholder="Valor (MT)" aria-label="Valor"><button id="rd">Depositar</button><button class="g" id="rw">Levantar</button></div><ul id="rq"></ul>
+<div class="r" id="chips"></div><p class="mu" id="ll" style="margin:0"></p>
+<div class="r"><input id="wa" type="number" min="1" step="1" placeholder="Valor (MT)" aria-label="Valor"><button id="rd">Depositar</button><button class="g" id="rw">Levantar</button></div>
+<input id="rf" style="width:100%" maxlength="30" autocomplete="off" placeholder="Referência M-Pesa do SMS (só para depósitos)"><details id="dh" class="mu"><summary>Como depositar, passo a passo</summary><div id="ds" style="white-space:pre-line;margin-top:6px"></div></details><ul id="rq"></ul>
 <div id="res" role="status" aria-live="polite"></div>
 <div><h2>Ao vivo</h2><ul id="feed"></ul></div>
 <details class="mu"><summary>Probabilidades (as fatias da roda não têm o mesmo peso)</summary><p id="odds"></p></details>
@@ -43,7 +44,15 @@ code{word-break:break-all;font-size:12px}[hidden]{display:none!important}
 <div class="r" style="margin-top:8px"><select id="au" aria-label="Jogador"></select><input id="aa" type="number" min="0" placeholder="Valor (MT)"></div>
 <div class="r" style="margin-top:8px"><button id="dp">Depósito</button><button class="g" id="wd">Levantamento</button></div>
 <div class="r" style="margin-top:8px"><input id="ba" type="number" min="0" placeholder="Valor da banca"><button class="g" id="b1">Banca +</button><button class="g" id="b2">Banca −</button></div>
-<div class="r" style="margin-top:8px"><button class="g" id="iv">Gerar convite</button></div><p class="mu" id="inv"></p><p class="mu" id="as"></p></section>
+<div class="r" style="margin-top:8px"><button class="g" id="iv">Gerar convite</button></div>
+<h2 style="font-size:14px;margin-top:12px">Happy hour</h2><p class="mu" id="hs"></p>
+<div class="r"><input id="ht" maxlength="140" placeholder="Texto da happy hour"><input id="hm" type="number" min="1" placeholder="Minutos (ex.: 45)"></div>
+<div class="r" style="margin-top:8px"><button id="hg">Iniciar agora</button><button class="g" id="hx">Terminar</button></div>
+<h2 style="font-size:14px;margin-top:12px">Definições</h2>
+<div class="r"><input id="cfn" placeholder="Número para depósitos"><input id="cfl" type="number" placeholder="Limite diário de perda (MT)"><input id="cfb" type="number" placeholder="Bónus da happy hour (%)"></div>
+<textarea id="cfs" rows="7" style="width:100%;margin-top:8px;font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:9px" placeholder="Passos do depósito (usa {numero} para o teu número)"></textarea>
+<input id="cfd" maxlength="140" style="width:100%;margin-top:8px" placeholder="Texto da happy hour automática">
+<div class="r" style="margin-top:8px"><button id="cfv">Guardar definições</button></div><p class="mu" id="inv"></p><p class="mu" id="as"></p></section>
 </div></main>
 <script>
 const SB_URL='https://wcuczrfzmxfseneaeseb.supabase.co',SB_KEY='sb_publishable_vJ3QlbERKFn767hrI9BFKQ_qs7FQ6bd';
@@ -79,7 +88,7 @@ SEG.forEach((m,i)=>{cx.beginPath();cx.moveTo(c,c);cx.arc(c,c,R,r+i*a,r+(i+1)*a);
 cx.save();cx.translate(c,c);cx.rotate(r+(i+.5)*a);cx.fillStyle='#fff';cx.font='bold 22px system-ui';cx.textAlign='right';cx.fillText(mf(m),R-14,8);cx.restore()});
 cx.beginPath();cx.arc(c,c,26,0,7);cx.fillStyle='#1a1a1a';cx.fill();
 cx.beginPath();cx.moveTo(c-14,2);cx.lineTo(c+14,2);cx.lineTo(c,34);cx.closePath();cx.fillStyle='#facc15';cx.fill();cx.strokeStyle='#000';cx.lineWidth=1.5;cx.stroke()}
-function animate(idx){return new Promise(ok=>{busy=true;const a=2*Math.PI/SEG.length,T=2*Math.PI,want=((-Math.PI/2-(idx+.5)*a+(Math.random()-.5)*.7*a)%T+T)%T,have=((rot%T)+T)%T,r0=rot,r1=rot+5*T+((want-have+T)%T),t0=performance.now(),D=4200;let last=Math.floor(r0/a);
+function animate(idx){return new Promise(ok=>{busy=true;const a=2*Math.PI/SEG.length,T=2*Math.PI,want=((-Math.PI/2-(idx+.5)*a+(Math.random()-.5)*.7*a)%T+T)%T,have=((rot%T)+T)%T,r0=rot,r1=rot+5*T+((want-have+T)%T),t0=performance.now(),D=7000;let last=Math.floor(r0/a);
 (function f(t){const k=Math.min(1,(t-t0)/D),e=1-Math.pow(1-k,3);rot=r0+(r1-r0)*e;draw(rot);const q=Math.floor(rot/a);if(q!==last){last=q;sfx.tick()}if(k<1)requestAnimationFrame(f);else{busy=false;ok()}})(t0)})}
 function addFeed(d){const li=document.createElement('li');li.textContent=d.user+': '+fmt(d.a)+' → '+mf(d.m)+' ('+fmt(d.pay)+')';const L=$('feed');L.prepend(li);while(L.children.length>30)L.lastChild.remove()}
 async function spin(){if(busy)return;const bet=parseFloat($('bet').value);if(!(bet>0))return msg('Indica a aposta.','lose');
@@ -87,10 +96,10 @@ AC=AC||new AudioContext();AC.resume();$('spin').disabled=true;busy=true;pend=nul
 const cs=[...crypto.getRandomValues(new Uint8Array(8))].map(x=>x.toString(16).padStart(2,'0')).join('');
 const r=await api('/api/spin',{bet,cs});if(r.e){busy=false;$('spin').disabled=false;if(/removida/.test(r.e)){await sb.auth.signOut();location.reload();return}return msg(r.e,'lose')}
 msg('A girar…');await animate(SEG.indexOf(r.m));
-$('spin').disabled=false;me.bal=pend??r.bal;setBal();setState({...r,commit:'a atualizar…'});sb.rpc('state').then(t=>{if(t.data)setState(t.data)});
+$('spin').disabled=false;me.bal=pend??r.bal;setBal();setState({...r,commit:'a atualizar…'});sb.rpc('state').then(t=>{if(t.data)setState(t.data)});ex();
 const net=r2(r.pay-bet);msg((net>=0?'+ ':'− ')+fmt(Math.abs(net))+' ('+mf(r.m)+')',net>0?'win':net<0?'lose':'');
 (r.m>=20?sfx.big:net>0?sfx.win:net<0?sfx.lose:sfx.tick)();addFeed({user:me.user,a:bet,m:r.m,pay:r.pay})}
-const lineOf=l=>l.t==='spin'?l.user+': '+fmt(l.a)+' → '+mf(l.m)+' ('+fmt(l.pay)+')':l.t==='dep'?'Depósito de '+l.user+': +'+fmt(l.a):l.t==='wd'?'Levantamento de '+l.user+': −'+fmt(l.a):l.t==='rm'?'Removido: '+l.user:'Banca '+(l.a>0?'+':'−')+fmt(Math.abs(l.a));
+const lineOf=l=>l.t==='spin'?l.user+': '+fmt(l.a)+' → '+mf(l.m)+' ('+fmt(l.pay)+')':l.t==='dep'?'Depósito de '+l.user+': +'+fmt(l.a):l.t==='wd'?'Levantamento de '+l.user+': −'+fmt(l.a):l.t==='rm'?'Removido: '+l.user:l.t==='bonus'?'Bónus happy hour de '+l.user+': +'+fmt(l.a):'Banca '+(l.a>0?'+':'−')+fmt(Math.abs(l.a));
 async function verify(l){const k=new TextEncoder(),h=async s=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',k.encode(s)))].map(x=>x.toString(16).padStart(2,'0')).join('');
 const key=await crypto.subtle.importKey('raw',k.encode(l.seed),{name:'HMAC',hash:'SHA-256'},false,['sign']),sig=new Uint8Array(await crypto.subtle.sign('HMAC',key,k.encode(l.cs+':'+l.n)));
 let v=0;for(let i=0;i<6;i++)v=v*256+sig[i];v%=1000;let a=0,m;for(const[x,w]of TABLE){a+=w;if(v<a){m=x;break}}return{ok:await h(l.seed)===l.commit&&m===l.m}}
@@ -98,7 +107,7 @@ async function hist(){const h=await api('/api/history'),L=$('hl');L.textContent=
 if(l.t==='spin'){const b=document.createElement('button');b.className='g';b.textContent='Verificar';b.style.cssText='margin-left:8px;padding:2px 8px;font-size:12px';b.onclick=async()=>{b.textContent=(await verify(l)).ok?'✔ confere':'✘ NÃO confere'};li.appendChild(b)}L.appendChild(li)})}
 async function adm(){const d=await api('/api/admin/users');if(d.e)return;const s=$('au'),L=$('al');s.textContent='';L.textContent='';
 d.users.forEach(x=>{const o=document.createElement('option');o.value=x.user;o.textContent=x.user+(x.phone?' · '+x.phone:'');s.appendChild(o);const li=document.createElement('li');li.textContent=x.user+(x.phone?' ('+x.phone+')':'')+': '+fmt(x.bal);if(!x.admin)li.appendChild(btn('Remover',e=>{const b=e.target;if(b.textContent==='Remover'){b.textContent='Confirmar?';setTimeout(()=>b.textContent='Remover',4000);return}adm2('/api/rpc',{fn:'admin_remove',args:{p_user:x.user}})}));L.appendChild(li)});
-$('inv').textContent=d.invites.length?'Convites por usar: '+d.invites.join(', '):'';rqload()}
+$('inv').textContent=d.invites.length?'Convites por usar: '+d.invites.join(', '):'';rqload();ex().then(fillcfg)}
 async function adm2(p,b){const r=await api(p,b);$('as').textContent=r.e||'Feito.';if(!r.e){$('aa').value=$('ba').value='';adm()}return r}
 $('dp').onclick=()=>{const v=parseFloat($('aa').value);if(v>0)adm2('/api/admin/credit',{user:$('au').value,amount:v})};
 $('wd').onclick=()=>{const v=parseFloat($('aa').value);if(v>0)adm2('/api/admin/credit',{user:$('au').value,amount:-v})};
@@ -116,7 +125,7 @@ function live(){if(es)sb.removeChannel(es);es=sb.channel('live')
 .subscribe()}
 function showAuth(){$('auth').hidden=false;$('app').hidden=true;if(es){sb.removeChannel(es);es=null}}
 async function start(){const m=await api('/api/me');if(m.e)return showAuth();me=m;$('auth').hidden=true;$('app').hidden=false;$('who').textContent=m.user;setBal();setState(m);$('nba').hidden=!m.admin;
-const h=await api('/api/history');if(!h.e)h.filter(l=>l.t==='spin').slice(0,15).reverse().forEach(addFeed);live();rqload()}
+const h=await api('/api/history');if(!h.e)h.filter(l=>l.t==='spin').slice(0,15).reverse().forEach(addFeed);live();rqload();ex();setInterval(ex,60000)}
 $('tl').onclick=()=>{mode='l';$('cw').hidden=true;$('go').textContent='Entrar'};
 $('tr').onclick=()=>{mode='r';$('cw').hidden=false;$('go').textContent='Criar conta'};
 $('go').onclick=async()=>{const ph=norm($('u').value),nk=$('nm').value.trim().toLowerCase(),pw=$('p').value,cd=$('code').value.trim();
@@ -154,9 +163,23 @@ ST={pend:'pendente',ok:'aprovado',no:'recusado',cancel:'cancelado'};
 async function rqload(){const d=await api('/api/reqs'),L=$('rq'),A=$('ar');if(d.e)return;L.textContent='';A.textContent='';
 d.rows.forEach(x=>{const t=(x.kind==='dep'?'Depósito ':'Levantamento ')+fmt(+x.amount);
 if(x.user_id===me.id&&L.children.length<5){const li=document.createElement('li');li.textContent=t+' — '+ST[x.status];if(x.status==='pend')li.appendChild(btn('Cancelar',()=>rres(x.id,'cancel')));L.appendChild(li)}
-if(me.admin&&x.status==='pend'){const li=document.createElement('li');li.textContent=x.username+': '+t;li.appendChild(btn('Aprovar',()=>rres(x.id,'ok')));li.appendChild(btn('Recusar',()=>rres(x.id,'no')));A.appendChild(li)}})}
-async function ask(k){const v=parseFloat($('wa').value);if(!(v>0))return msg('Indica o valor.','lose');const r=await api('/api/rpc',{fn:'request_money',args:{p_kind:k,p_amount:v}});if(r.e)return msg(r.e,'lose');$('wa').value='';msg(k==='dep'?'Pedido enviado. Envia o dinheiro ao administrador e espera a confirmação.':'Pedido enviado. O administrador paga-te e confirma.');rb();rqload()}
+if(me.admin&&x.status==='pend'){const li=document.createElement('li');li.textContent=x.username+': '+t+(x.ref?' · ref '+x.ref:'')+(+x.bonus_pct>0?' · bónus '+x.bonus_pct+'%':'');li.appendChild(btn('Aprovar',()=>rres(x.id,'ok')));li.appendChild(btn('Recusar',()=>rres(x.id,'no')));A.appendChild(li)}})}
+async function ask(k){const v=parseFloat($('wa').value);if(!(v>0))return msg('Indica o valor.','lose');let r;
+if(k==='dep'){const rf=$('rf').value.trim();if(!/^[A-Za-z0-9.\-]{6,30}$/.test(rf)){$('dh').open=true;return msg('Faz primeiro a transferência (passos em "Como depositar") e cola aqui a referência do SMS.','lose')}
+r=await api('/api/rpc',{fn:'request_money2',args:{p_kind:'dep',p_amount:v,p_ref:rf}})}
+else r=await api('/api/rpc',{fn:'request_money',args:{p_kind:k,p_amount:v}});
+if(r.e)return msg(r.e,'lose');$('wa').value=$('rf').value='';msg(k==='dep'?'Pedido enviado. Envia o dinheiro ao administrador e espera a confirmação.':'Pedido enviado. O administrador paga-te e confirma.');rb();rqload()}
 $('rd').onclick=()=>ask('dep');$('rw').onclick=()=>ask('wd');
 $('odds').textContent=TABLE.map(([m,w])=>mf(m)+' = '+String(w/10).replace('.',',')+'%').join(' · ')+'. Retorno médio: '+String(TABLE.reduce((a,[m,w])=>a+m*w,0)/10).replace('.',',')+'% (a banca fica com a diferença).';
+let X=null,lt=0;
+(function idle(t){if(!busy&&!document.hidden&&t-lt>45){rot+=(t-lt)*.0004;lt=t;draw(rot)}else if(busy||document.hidden)lt=t;requestAnimationFrame(idle)})(0);
+async function ex(){const r=await sb.rpc('extras');if(r.error||!r.data)return;X=r.data;$('ds').textContent=X.steps||'';
+const h=$('hh');if(X.hh&&X.hh.on){const m=Math.max(1,Math.ceil((X.hh.until-Date.now())/60000));h.textContent='🎉 Happy hour! +'+X.hh.bonus+'% de bónus nos depósitos pedidos agora. '+(X.hh.text||'')+' (faltam '+m+' min)';h.hidden=false}else h.hidden=true;
+$('ll').textContent='Perdas de hoje: '+fmt(Math.max(0,+X.lost))+' de '+fmt(+X.limit)+' (limite diário)';
+if(me&&me.admin&&X.sched)$('hs').textContent='Happy hours automáticas de hoje: '+X.sched.map(q=>q.from+'–'+q.to).join(' · ')+(X.hh.on&&X.hh.manual?' · manual activa agora':'')}
+function fillcfg(){if(!X||!X.cfg)return;$('cfn').value=X.cfg.number||'';$('cfl').value=X.cfg.limit;$('cfb').value=X.cfg.bonus;$('cfs').value=X.cfg.steps;$('cfd').value=X.cfg.text}
+$('cfv').onclick=async()=>{const set=(k,v)=>api('/api/rpc',{fn:'admin_set',args:{p_key:k,p_value:String(v)}});const rs=await Promise.all([set('admin_number',$('cfn').value.trim()),set('loss_limit',$('cfl').value||200),set('hh_bonus',$('cfb').value||10),set('deposit_steps',$('cfs').value),set('hh_text',$('cfd').value)]);const e=rs.find(x=>x.e);$('as').textContent=e?e.e:'Definições guardadas.';ex()};
+$('hg').onclick=async()=>{const r=await api('/api/rpc',{fn:'admin_happy',args:{p_text:$('ht').value.trim(),p_minutes:parseInt($('hm').value)||45}});$('as').textContent=r.e||'Happy hour iniciada.';ex()};
+$('hx').onclick=async()=>{const r=await api('/api/rpc',{fn:'admin_happy',args:{p_text:'',p_minutes:0}});$('as').textContent=r.e||'Happy hour terminada.';ex()};
 draw(0);start();
 </script></body></html>
